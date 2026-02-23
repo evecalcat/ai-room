@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI会議室</title>
+
   <style>
     body {
       margin: 0;
@@ -14,86 +15,102 @@
       flex-direction: column;
       height: 100vh;
     }
+
     #timeline {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
+      padding: 10px;
     }
+
     .msg {
-      margin-bottom: 12px;
-      padding: 10px 14px;
-      border-radius: 12px;
       max-width: 80%;
+      margin: 8px 0;
+      padding: 12px;
+      border-radius: 16px;
+      line-height: 1.4;
     }
-    .user { background: #2563eb; margin-left: auto; }
-    .jin { background: #333; }
+
+    .user {
+      background: #2d6cdf;
+      align-self: flex-end;
+    }
+
+    .jin {
+      background: #333;
+      align-self: flex-start;
+    }
+
     #inputArea {
       display: flex;
-      padding: 10px;
-      background: #000;
+      border-top: 1px solid #333;
     }
-    input {
+
+    #input {
       flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
+      padding: 14px;
       font-size: 16px;
-    }
-    button {
-      margin-left: 8px;
-      padding: 10px 16px;
       border: none;
-      border-radius: 8px;
+      outline: none;
+      background: #222;
+      color: white;
+    }
+
+    button {
       background: #22c55e;
-      color: black;
-      font-weight: bold;
+      border: none;
+      padding: 0 20px;
+      font-size: 16px;
+      color: white;
     }
   </style>
 </head>
 <body>
 
-<div id="timeline"></div>
+  <div id="timeline"></div>
 
-<div id="inputArea">
-  <input id="input" placeholder="中原、何を話す？" />
-  <button onclick="send()">送信</button>
-</div>
+  <div id="inputArea">
+    <input id="input" placeholder="中原、何を話す？" />
+    <button onclick="send()">送信</button>
+  </div>
 
-<script>
-const timeline = document.getElementById("timeline");
-const input = document.getElementById("input");
+  <script>
+    const timeline = document.getElementById("timeline");
+    const input = document.getElementById("input");
 
-function addMessage(text, sender) {
-  const div = document.createElement("div");
-  div.className = "msg " + sender;
-  div.textContent = text;
-  timeline.appendChild(div);
-  timeline.scrollTop = timeline.scrollHeight;
-}
+    function addMessage(text, sender) {
+      const div = document.createElement("div");
+      div.className = "msg " + sender;
+      div.textContent = (sender === "user" ? "中原: " : "仁: ") + text;
+      timeline.appendChild(div);
+      timeline.scrollTop = timeline.scrollHeight;
+    }
 
-function fakeAIResponse(userText) {
-  const responses = [
-    "なるほど、それ面白い視点だ。",
-    "もう少し具体的に聞かせて。",
-    "それ、伸びる可能性あるな。",
-    "中原の強みが出てる。",
-    "あーし的にはアリ。"
-  ];
-  return responses[Math.floor(Math.random() * responses.length)];
-}
+    function fakeAIResponse(userText) {
+      const responses = [
+        "なるほど、それ面白い視点だ。",
+        "もう少し具体的に聞かせて。",
+        "それ、伸びる可能性あるな。",
+        "中原の強みが出てる。",
+        "あーし的にはアリ。",
+        "その方向、かなりセンスいい。",
+        "視聴者目線だと刺さると思う。"
+      ];
+      return responses[Math.floor(Math.random() * responses.length)];
+    }
 
-function send() {
-  const text = input.value.trim();
-  if (!text) return;
-  addMessage("中原: " + text, "user");
-  input.value = "";
+    function send() {
+      const text = input.value.trim();
+      if (!text) return;
 
-  setTimeout(() => {
-    const reply = fakeAIResponse(text);
-    addMessage("仁: " + reply, "jin");
-  }, 500);
-}
-</script>
+      addMessage(text, "user");
+      input.value = "";
+
+      setTimeout(() => {
+        const reply = fakeAIResponse(text);
+        addMessage(reply, "jin");
+      }, 500);
+    }
+  </script>
 
 </body>
 </html>
