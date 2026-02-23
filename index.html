@@ -2,412 +2,739 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI会議室</title>
+  <!-- iOSズーム抑止（アクセシビリティ上100%ではないが、要望優先） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0f10" />
+  <title>KaiGI</title>
 
-  <!-- PWA -->
+  <!-- PWA（あれば拾う。無くても動く） -->
   <link rel="manifest" href="./manifest.webmanifest" />
-  <meta name="theme-color" content="#111111" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <style>
     :root{
-      --bg:#0f0f10;
-      --panel:#141416;
-      --panel2:#1b1b1f;
+      --bg:#0b0b0c;
+      --bg2:#0f0f10;
+      --panel: rgba(20,20,22,.72);
+      --panel2: rgba(10,10,11,.86);
       --text:#ffffff;
-      --muted:#b6b6b6;
-      --accent:#2ea043; /* GitHub green-ish */
-      --bubbleUser:#1f5eff;
-      --bubbleBot:#2a2a2f;
-      --border:rgba(255,255,255,.08);
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --muted: rgba(255,255,255,.62);
+      --border: rgba(255,255,255,.10);
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+
+      --accent:#2ea043;
+      --userBubble1: rgba(33,95,255,.98);
+      --userBubble2: rgba(22,72,210,.98);
+      --botBubble: rgba(42,42,47,.92);
+
       --radius: 18px;
+      --pillRadius: 999px;
+      --maxw: 860px;
     }
 
-    *{box-sizing:border-box;}
-    body{
-      margin:0;
-      background: linear-gradient(180deg, #0b0b0c 0%, #111 40%, #0b0b0c 100%);
-      color:var(--text);
+    *{ box-sizing:border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(1200px 900px at 30% -20%, #1a1a24 0%, transparent 55%),
+                  radial-gradient(900px 700px at 120% 30%, #12201a 0%, transparent 55%),
+                  linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
-      height:100vh;
-      display:flex;
-      flex-direction:column;
+
+      /* ここが重要：ページ全体スクロール禁止 */
+      overflow: hidden;
+
+      /* iOSのバウンス/オーバースクロール抑止 */
+      overscroll-behavior: none;
     }
 
-    header{
-      position:sticky;
-      top:0;
-      z-index:10;
-      background: rgba(10,10,11,.85);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-      padding:14px 14px 12px;
+    /* iOSのダブルタップズーム抑止の補助（完全ではないが効く） */
+    body { touch-action: manipulation; }
+
+    /* 画面の骨格：ヘッダ固定 / タイムラインだけスクロール / 入力固定 */
+    .app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 14px 14px 12px;
+      background: var(--panel2);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .headerInner{
+      width: min(var(--maxw), 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     .titleRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
+      min-width:0;
     }
+
     .title{
-      font-weight:800;
-      letter-spacing:.02em;
-      font-size:18px;
       display:flex;
-      gap:10px;
       align-items:center;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+      gap:10px;
+      min-width:0;
+      font-weight: 900;
+      letter-spacing: .02em;
+      font-size: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+
     .pill{
-      font-size:12px;
-      padding:4px 10px;
-      border-radius:999px;
+      flex: 0 0 auto;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: var(--pillRadius);
+      border: 1px solid var(--border);
       background: rgba(255,255,255,.08);
-      border:1px solid var(--border);
       color: var(--muted);
-      flex:0 0 auto;
+      white-space: nowrap;
     }
 
-    .wrap{
-      width:min(760px, 100%);
-      margin:0 auto;
-      flex:1;
+    .toolbar{
       display:flex;
-      flex-direction:column;
-      padding:14px;
-      gap:12px;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items:center;
     }
 
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      padding: 8px 11px;
+      border-radius: var(--pillRadius);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active{ transform: translateY(1px); }
+
+    .btn.primary{
+      background: rgba(46,160,67,.16);
+      border-color: rgba(46,160,67,.35);
+    }
+    .btn.danger{
+      background: rgba(255,60,60,.16);
+      border-color: rgba(255,60,60,.30);
+    }
+    .btn.toggleOn{
+      outline: 2px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.12);
+    }
+
+    main {
+      flex: 1;
+      min-height: 0; /* これが無いとiOSでスクロール崩れる */
+      display: flex;
+      justify-content: center;
+      padding: 12px 14px;
+    }
+
+    .stage{
+      width: min(var(--maxw), 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    /* タイムラインだけスクロールさせる */
     .timeline{
-      flex:1;
-      overflow:auto;
-      padding:12px;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+
+      padding: 12px;
       border-radius: var(--radius);
-      background: rgba(20,20,22,.55);
-      border:1px solid var(--border);
+      background: var(--panel);
+      border: 1px solid var(--border);
       box-shadow: var(--shadow);
     }
 
     .row{
-      display:flex;
-      margin:10px 0;
-      gap:10px;
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+      align-items: flex-end;
     }
-    .row.user{justify-content:flex-end;}
-    .row.bot{justify-content:flex-start;}
+    .row.user{ justify-content: flex-end; }
+    .row.bot{ justify-content: flex-start; }
 
     .bubble{
       max-width: 86%;
-      padding:12px 14px;
+      padding: 12px 14px;
       border-radius: 16px;
-      border:1px solid var(--border);
-      line-height:1.35;
-      font-size:15px;
-      white-space:pre-wrap;
-      word-break:break-word;
+      border: 1px solid var(--border);
+      line-height: 1.42;
+      font-size: 15px;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
     .bubble.user{
-      background: linear-gradient(180deg, rgba(33,95,255,.95), rgba(22,72,210,.95));
+      background: linear-gradient(180deg, var(--userBubble1), var(--userBubble2));
       border-color: rgba(255,255,255,.12);
     }
     .bubble.bot{
-      background: rgba(42,42,47,.92);
+      background: var(--botBubble);
     }
 
-    .meta{
-      margin-top:6px;
-      font-size:12px;
-      color: rgba(255,255,255,.55);
-    }
-
-    .composer{
-      position:sticky;
-      bottom:0;
-      background: rgba(10,10,11,.85);
-      backdrop-filter: blur(10px);
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      padding:10px;
+    .metaRow{
       display:flex;
-      gap:10px;
-      box-shadow: var(--shadow);
+      gap: 10px;
+      margin-top: 6px;
+      align-items:center;
+      color: rgba(255,255,255,.55);
+      font-size: 12px;
     }
-    input{
-      flex:1;
-      border:none;
-      outline:none;
-      padding:12px 12px;
+    .vote{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+    }
+    .voteBtn{
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.78);
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .voteBtn.on{
+      background: rgba(46,160,67,.22);
+      border-color: rgba(46,160,67,.36);
+      color: rgba(255,255,255,.92);
+    }
+    .voteBtn.bad.on{
+      background: rgba(255,60,60,.22);
+      border-color: rgba(255,60,60,.36);
+    }
+
+    /* 入力バー：下固定（ただしbody全体スクロールしないので安定） */
+    .composer{
+      position: sticky;
+      bottom: 0;
+      z-index: 40;
+      background: var(--panel2);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .input{
+      flex: 1;
+      border: 1px solid var(--border);
+      outline: none;
+      padding: 12px 12px;
       border-radius: 14px;
       background: rgba(255,255,255,.08);
       color: var(--text);
-      font-size:16px;
+      font-size: 16px;
     }
-    button{
-      border:none;
-      outline:none;
-      padding:12px 16px;
+
+    .send{
+      border: none;
+      outline: none;
+      padding: 12px 16px;
       border-radius: 14px;
       background: var(--accent);
-      color: #0b0b0c;
-      font-weight:800;
-      font-size:15px;
-      cursor:pointer;
-      white-space:nowrap;
+      color: #07110a;
+      font-weight: 900;
+      font-size: 15px;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
     }
-    button:active{transform: translateY(1px);}
-
-    .toolbar{
-      display:flex;
-      gap:8px;
-      margin-top:10px;
-      flex-wrap:wrap;
-    }
-    .smallBtn{
-      background: rgba(255,255,255,.08);
-      color: var(--text);
-      border:1px solid var(--border);
-      padding:8px 10px;
-      font-size:12px;
-      border-radius: 999px;
-    }
-    .smallBtn.danger{
-      background: rgba(255,60,60,.14);
-      border-color: rgba(255,60,60,.28);
-    }
+    .send:active{ transform: translateY(1px); }
 
     .hint{
-      font-size:12px;
-      color: rgba(255,255,255,.55);
-      margin-top:8px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,.56);
+      line-height: 1.45;
+      user-select:none;
+    }
+
+    /* iOSで画面が上下に「引っ張られる」感覚を弱める */
+    .timeline::-webkit-scrollbar{ width: 10px; }
+    .timeline::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0);
+      background-clip: padding-box;
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="titleRow">
-      <div class="title">AI会議室 <span class="pill" id="modePill">モード: 仁（じん）</span></div>
-      <div class="pill" id="statusPill">PWA: 準備中</div>
-    </div>
-    <div class="toolbar">
-      <button class="smallBtn" id="modeJin">仁（じん）</button>
-      <button class="smallBtn" id="modeAi">愛</button>
-      <button class="smallBtn" id="modeYu">勇</button>
-      <button class="smallBtn" id="modeMusic">音楽</button>
-      <button class="smallBtn danger" id="clear">履歴クリア</button>
-    </div>
-  </header>
+  <div class="app">
+    <header>
+      <div class="headerInner">
+        <div class="titleRow">
+          <div class="title">
+            KaiGI
+            <span class="pill" id="modePill">Mode: ChatGPT</span>
+          </div>
+          <div class="pill" id="pwaPill">PWA: 未設定</div>
+        </div>
 
-  <main class="wrap">
-    <div class="timeline" id="timeline" aria-live="polite"></div>
+        <div class="toolbar">
+          <button class="btn primary toggleOn" id="btn_gpt">ChatGPT</button>
+          <button class="btn" id="btn_claude">Claude</button>
+          <button class="btn" id="btn_gemini">Gemini</button>
+          <button class="btn" id="btn_music">音楽</button>
+          <button class="btn" id="btn_all">全員会議</button>
+          <button class="btn" id="btn_rage">暴走（長文）</button>
+          <button class="btn danger" id="btn_clear">履歴クリア</button>
+        </div>
+      </div>
+    </header>
 
-    <div class="composer">
-      <input id="input" placeholder="中原、何を話す？" autocomplete="off" />
-      <button id="send">送信</button>
-    </div>
+    <main>
+      <div class="stage">
+        <div class="timeline" id="timeline" aria-live="polite"></div>
 
-    <div class="hint">
-      ※いまは“ダミー応答”。あとでAPI接続すると本物になる。<br/>
-      iPhoneはSafariで開いて「共有→ホーム画面に追加」でアプリ化できる。
-    </div>
-  </main>
+        <div class="composer">
+          <input class="input" id="input" placeholder="中原、何を話す？" autocomplete="off" />
+          <button class="send" id="send">送信</button>
+        </div>
+
+        <div class="hint">
+          ※いまは“ダミー応答”。後でAPI接続すると本物のAIになる。<br/>
+          iPhoneはSafariで開いて「共有 → ホーム画面に追加」でアプリ化。
+        </div>
+      </div>
+    </main>
+  </div>
 
   <script>
-    // ==========
-    // State
-    // ==========
-    const timeline = document.getElementById("timeline");
-    const input = document.getElementById("input");
-    const sendBtn = document.getElementById("send");
-    const modePill = document.getElementById("modePill");
-    const statusPill = document.getElementById("statusPill");
-
-    const modes = {
-      jin: { label: "仁（じん）", prefix: "仁", style: "jin" },
-      ai: { label: "愛", prefix: "愛", style: "ai" },
-      yu: { label: "勇", prefix: "勇", style: "yu" },
-      music: { label: "音楽", prefix: "音楽", style: "music" },
+    /*****************************************************************
+     * Storage keys
+     *****************************************************************/
+    const LS = {
+      history: "kaigi_history_v1",
+      feedback: "kaigi_feedback_v1",
+      settings: "kaigi_settings_v1",
     };
 
-    let currentMode = "jin";
+    /*****************************************************************
+     * Modes / Personas (表示名は “本名” をメインに)
+     *****************************************************************/
+    const AGENTS = {
+      gpt:    { id:"gpt",    name:"ChatGPT", tag:"ChatGPT" },
+      claude: { id:"claude", name:"Claude",  tag:"Claude"  },
+      gemini: { id:"gemini", name:"Gemini",  tag:"Gemini"  },
+      music:  { id:"music",  name:"音楽",    tag:"音楽"    },
+      all:    { id:"all",    name:"全員",    tag:"全員"    },
+    };
 
-    // localStorage restore
-    const LS_KEY = "ai-room-chat-v1";
-    const saved = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+    const DEFAULTS = {
+      mode: "gpt",
+      rage: false,   // 暴走（長文解禁）
+    };
 
-    function persist(messages){
-      localStorage.setItem(LS_KEY, JSON.stringify(messages));
+    /*****************************************************************
+     * DOM
+     *****************************************************************/
+    const $timeline = document.getElementById("timeline");
+    const $input = document.getElementById("input");
+    const $send = document.getElementById("send");
+    const $modePill = document.getElementById("modePill");
+    const $pwaPill = document.getElementById("pwaPill");
+
+    const btns = {
+      gpt: document.getElementById("btn_gpt"),
+      claude: document.getElementById("btn_claude"),
+      gemini: document.getElementById("btn_gemini"),
+      music: document.getElementById("btn_music"),
+      all: document.getElementById("btn_all"),
+      rage: document.getElementById("btn_rage"),
+      clear: document.getElementById("btn_clear"),
+    };
+
+    /*****************************************************************
+     * State
+     *****************************************************************/
+    let settings = loadJson(LS.settings, DEFAULTS);
+    let history = loadJson(LS.history, []);
+    let feedback = loadJson(LS.feedback, []);
+
+    // util
+    function loadJson(key, fallback){
+      try{
+        const raw = localStorage.getItem(key);
+        if(!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return (parsed === null || parsed === undefined) ? fallback : parsed;
+      }catch{
+        return fallback;
+      }
     }
+    function saveJson(key, val){
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+    function uid(){
+      return "m_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+    }
+    function nowTs(){ return Date.now(); }
 
-    let messages = Array.isArray(saved) ? saved : [];
+    /*****************************************************************
+     * Render
+     *****************************************************************/
+    function escapeText(s){ return String(s ?? ""); }
 
-    // ==========
-    // UI helpers
-    // ==========
-    function addMessage(text, who){
+    function makeMessageRow(msg){
+      // msg: {id, who:'user'|'bot', agentId?, text, ts}
       const row = document.createElement("div");
-      row.className = "row " + (who === "user" ? "user" : "bot");
+      row.className = "row " + (msg.who === "user" ? "user" : "bot");
 
       const bubble = document.createElement("div");
-      bubble.className = "bubble " + (who === "user" ? "user" : "bot");
-      bubble.textContent = text;
+      bubble.className = "bubble " + (msg.who === "user" ? "user" : "bot");
+      bubble.textContent = msg.text;
 
       row.appendChild(bubble);
-      timeline.appendChild(row);
-      timeline.scrollTop = timeline.scrollHeight;
+
+      // bot only: feedback UI
+      if(msg.who === "bot"){
+        const meta = document.createElement("div");
+        meta.className = "metaRow";
+
+        const left = document.createElement("div");
+        left.textContent = (msg.agentId && AGENTS[msg.agentId]) ? AGENTS[msg.agentId].name : "AI";
+
+        const voteWrap = document.createElement("div");
+        voteWrap.className = "vote";
+
+        const up = document.createElement("button");
+        up.className = "voteBtn";
+        up.textContent = "👍";
+        up.addEventListener("click", () => vote(msg.id, +1, up, down));
+
+        const down = document.createElement("button");
+        down.className = "voteBtn bad";
+        down.textContent = "👎";
+        down.addEventListener("click", () => vote(msg.id, -1, down, up));
+
+        // restore vote state
+        const existing = feedback.find(f => f.msgId === msg.id);
+        if(existing?.vote === 1) up.classList.add("on");
+        if(existing?.vote === -1) down.classList.add("on");
+
+        voteWrap.appendChild(up);
+        voteWrap.appendChild(down);
+
+        meta.appendChild(left);
+        meta.appendChild(voteWrap);
+
+        // metaはbubbleの下に見えるようrowの後に置くのが理想だが、
+        // 構造簡単にするためbubble内に入れず、rowの後に追加する。
+        // ただし見た目は十分。
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.flexDirection = "column";
+        wrapper.style.alignItems = (msg.who === "user") ? "flex-end" : "flex-start";
+        wrapper.appendChild(row);
+        wrapper.appendChild(meta);
+        return wrapper;
+      }
+
+      return row;
     }
 
     function renderAll(){
-      timeline.innerHTML = "";
-      for(const m of messages){
-        addMessage(m.text, m.who);
+      $timeline.innerHTML = "";
+      for(const msg of history){
+        $timeline.appendChild(makeMessageRow(msg));
       }
+      scrollToBottom(true);
     }
 
-    function setMode(mode){
-      currentMode = mode;
-      modePill.textContent = "モード: " + modes[mode].label;
-      addSystem(`モードを「${modes[mode].label}」に切り替えた。`);
-      saveSystem(`モードを「${modes[mode].label}」に切り替えた。`);
+    function appendMessage(msg){
+      history.push(msg);
+      saveJson(LS.history, history);
+      $timeline.appendChild(makeMessageRow(msg));
+      scrollToBottom(false);
     }
 
-    function addSystem(text){
-      // bot扱いで表示
-      addMessage(text, "bot");
-    }
-    function saveSystem(text){
-      messages.push({ who:"bot", text });
-      persist(messages);
+    function scrollToBottom(force){
+      // force: 最初のレンダリングなど
+      // iOSでの変なジャンプ抑止
+      requestAnimationFrame(() => {
+        $timeline.scrollTop = $timeline.scrollHeight + 9999;
+      });
     }
 
-    // ==========
-    // Dummy brains (後でAPIに置き換える)
-    // ==========
-    function replyByMode(userText){
-      // 中原の呼び方固定（必要なら変えれる）
+    /*****************************************************************
+     * Voting (👍👎)
+     *****************************************************************/
+    function vote(msgId, v, btnOn, btnOff){
+      // toggle
+      const idx = feedback.findIndex(f => f.msgId === msgId);
+      const existing = idx >= 0 ? feedback[idx] : null;
+
+      if(existing && existing.vote === v){
+        // remove vote
+        feedback.splice(idx, 1);
+        btnOn.classList.remove("on");
+      }else{
+        const obj = {
+          msgId,
+          vote: v,
+          ts: nowTs(),
+          // 後で学習に使う余地
+          mode: settings.mode,
+        };
+        if(idx >= 0) feedback[idx] = obj;
+        else feedback.push(obj);
+
+        btnOn.classList.add("on");
+        btnOff.classList.remove("on");
+      }
+
+      saveJson(LS.feedback, feedback);
+    }
+
+    /*****************************************************************
+     * Modes / UI state
+     *****************************************************************/
+    function setMode(modeId){
+      settings.mode = modeId;
+      saveJson(LS.settings, settings);
+
+      // toggle ui
+      Object.values(btns).forEach(b => b?.classList?.remove("toggleOn"));
+      if(btns[modeId]) btns[modeId].classList.add("toggleOn");
+
+      const label = AGENTS[modeId]?.name ?? "ChatGPT";
+      $modePill.textContent = "Mode: " + label;
+
+      systemLine(`モードを「${label}」に切り替えた。`);
+    }
+
+    function toggleRage(){
+      settings.rage = !settings.rage;
+      saveJson(LS.settings, settings);
+
+      btns.rage.classList.toggle("toggleOn", settings.rage);
+      systemLine(settings.rage ? "暴走モードON（長文解禁）" : "暴走モードOFF");
+    }
+
+    function systemLine(text){
+      appendMessage({
+        id: uid(),
+        who: "bot",
+        agentId: "gpt",
+        text: String(text),
+        ts: nowTs(),
+        system: true
+      });
+    }
+
+    /*****************************************************************
+     * Dummy responder (あとで Worker 経由で本物に置換)
+     *****************************************************************/
+    function dummyReply(userText){
       const nakahara = "中原";
+      const short = [
+        `${nakahara}、いい視点。次の具体を一個だけ出そ。`,
+        `了解。いま必要なのは「削る」か「足す」かの決断。`,
+        `そのまま行ける。詰めるなら1点だけだ。`,
+        `いいね。ログ見て次の分岐を選ぼ。`,
+      ];
 
-      if(currentMode === "jin"){
-        const pool = [
-          `${nakahara}の強みが出てる。`,
-          `あーし的にはアリ。もう一歩だけ詰めよ。`,
-          `それ面白い視点だな。具体例で聞かせて。`,
-          `いいね。次の一手は「削る」か「増やす」か決めよ。`
-        ];
-        return pool[Math.floor(Math.random()*pool.length)];
-      }
+      const long = [
+        `${nakahara}、ここから「勝ち筋」を作る。\n\n①目的：意思決定を速く、強く。\n②手段：複数AI→比較→採用→学習。\n③制約：投稿はGOが出た時だけ。\n\n次の一手は、\n- “評価軸”を固定する（伸び/時間/リスク）\n- “ログ”を残して、後から方針転換できるようにする\n- “最短の実装”で回す（1日で改善）\n\nまず、今日のゴールを1行で言って。`,
+        `了解。暴走モードなので深掘る。\n\n【提案】\n- 全員会議で案を並べる\n- 1つを採用し、理由とログを残す\n- 👍👎で学習データ化\n\n【今やること】\n1) 目的を短文化\n2) 1投稿のフォーマット固定\n3) “GO”判定条件を作る\n\nさあ、いまのテーマは「稼ぎの自動化」だろ？\n最初に自動化する工程を一つ選べ。`,
+      ];
 
-      if(currentMode === "ai"){
-        // 愛：受容/肯定/落ち着かせる
-        const pool = [
-          `${nakahara}、そのままで大丈夫。いまの気持ちをもう少し言葉にしてみよ。`,
-          `焦らなくていいよ。できてる部分、ちゃんとある。`,
-          `怖さがあるなら、いまは“安全に小さく”進めよ。`,
-          `うん、わかる。あーしは味方。次の一歩だけ一緒に。`
-        ];
-        return pool[Math.floor(Math.random()*pool.length)];
-      }
+      const byAgent = {
+        gpt: () => (settings.rage ? pick(long) : pick(short)),
+        claude: () => (settings.rage
+          ? `${nakahara}、焦りがあるのは自然だよ。\n\nやることを小さく切ろう。\n- 今日は「AI会議が安定して動く」だけ。\n- 伸ばし方は“後で”でいい。\n\nまず今の不安を一言で言って。`
+          : `${nakahara}、大丈夫。いまの状況を一緒に整理しよ。`),
+        gemini: () => (settings.rage
+          ? `${nakahara}、結論から。\n\n1) 今日：UI安定化とログ\n2) 次：本物API接続\n3) その次：全員会議と採用ロジック\n\n今すぐやるのは「次の作業を一つに絞る」だ。`
+          : `${nakahara}、今やる。次の一手を選べ。`),
+        music: () => (settings.rage
+          ? `${nakahara}、夜の画面が鳴る。\n言葉がビートで、判断がリズム。\n\nまず一行。\n「今日の勝ち」を書け。`
+          : `${nakahara}、クリック、コミット、デプロイ。次いこ。`),
+        all: () => {
+          // 全員会議：各AIが短く出す（暴走時はやや長め）
+          const a = [
+            `ChatGPT: ${(settings.rage ? pick(long) : pick(short))}`,
+            `Claude: ${(settings.rage ? `${nakahara}、不安の正体を言語化しよう。次の一歩だけ。` : `${nakahara}、落ち着いて一歩ずつ。`)}`,
+            `Gemini: ${(settings.rage ? `結論→実行→検証。いまは“実行”。` : `結論、貼って確認。`)}`,
+            `音楽: ${(settings.rage ? `ノイズを切って、芯だけ残せ。` : `テンポを落とさず。`)}`,
+          ];
+          return a.join("\n\n");
+        }
+      };
 
-      if(currentMode === "yu"){
-        // 勇：背中押し/決断促す
-        const pool = [
-          `${nakahara}、今やる。小さくてもいい、確定で進める。`,
-          `迷ってる暇ない。1回打って、動いたら勝ち。`,
-          `いける。次は“公開→確認→修正”の3手で終わらせる。`,
-          `やることは一つ。貼ってコミットして確認。以上。`
-        ];
-        return pool[Math.floor(Math.random()*pool.length)];
-      }
-
-      if(currentMode === "music"){
-        // 音楽：短い韻/リズム/遊び（後で本格実装）
-        const pool = [
-          `${nakahara}、コードの鼓動で前に進も。`,
-          `クリック、コミット、デプロイ——リズムで勝つ。`,
-          `夜の画面に、緑のボタン。押せば世界が鳴る。`,
-          `言葉はビート、手はタップ。次の一手、いこ。`
-        ];
-        return pool[Math.floor(Math.random()*pool.length)];
-      }
-
-      return "了解。";
+      const fn = byAgent[settings.mode] || byAgent.gpt;
+      return fn();
     }
 
+    function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+    /*****************************************************************
+     * Send
+     *****************************************************************/
     function send(){
-      const text = input.value.trim();
-      if(!text) return;
+      const raw = ($input.value || "").trim();
+      if(!raw) return;
 
-      // user message
-      const userLine = `中原: ${text}`;
-      addMessage(userLine, "user");
-      messages.push({ who:"user", text: userLine });
-      persist(messages);
+      const userMsg = {
+        id: uid(),
+        who: "user",
+        text: `中原: ${raw}`,
+        ts: nowTs(),
+      };
+      appendMessage(userMsg);
+      $input.value = "";
 
-      input.value = "";
-
-      // bot reply (simulate delay)
+      // ダミー返信（後でAPI接続に差し替え）
       setTimeout(() => {
-        const reply = `${modes[currentMode].prefix}: ${replyByMode(text)}`;
-        addMessage(reply, "bot");
-        messages.push({ who:"bot", text: reply });
-        persist(messages);
-      }, 450);
+        const agentId = (settings.mode === "all") ? "all" : settings.mode;
+        const reply = dummyReply(raw);
+        const botMsg = {
+          id: uid(),
+          who: "bot",
+          agentId,
+          text: `${AGENTS[agentId].tag}: ${reply}`,
+          ts: nowTs(),
+        };
+        appendMessage(botMsg);
+      }, 350);
     }
 
-    // ==========
-    // Events
-    // ==========
-    sendBtn.addEventListener("click", send);
-    input.addEventListener("keydown", (e) => {
-      if(e.key === "Enter") send();
-    });
-
-    document.getElementById("modeJin").addEventListener("click", () => setMode("jin"));
-    document.getElementById("modeAi").addEventListener("click", () => setMode("ai"));
-    document.getElementById("modeYu").addEventListener("click", () => setMode("yu"));
-    document.getElementById("modeMusic").addEventListener("click", () => setMode("music"));
-
-    document.getElementById("clear").addEventListener("click", () => {
-      if(confirm("履歴を消す？（元に戻せない）")){
-        messages = [];
-        persist(messages);
-        renderAll();
-        addSystem("履歴をクリアした。");
-        saveSystem("履歴をクリアした。");
-      }
-    });
-
-    // ==========
-    // Boot
-    // ==========
-    renderAll();
-    if(messages.length === 0){
-      addSystem("よう、AI会議室。まずは一言くれ。");
-      saveSystem("よう、AI会議室。まずは一言くれ。");
+    /*****************************************************************
+     * Clear
+     *****************************************************************/
+    function clearAll(){
+      if(!confirm("履歴を消す？（元に戻せない）")) return;
+      history = [];
+      saveJson(LS.history, history);
+      renderAll();
+      systemLine("履歴をクリアした。");
     }
 
-    // ==========
-    // Service Worker (PWA)
-    // ==========
-    async function setupSW(){
-      if(!("serviceWorker" in navigator)) {
-        statusPill.textContent = "PWA: 非対応";
+    /*****************************************************************
+     * PWA / Service Worker setup (あれば有効化、なければ未設定)
+     *****************************************************************/
+    async function setupPWA(){
+      // manifest が 200 なら「設定あり」
+      const manifestOk = await (async () => {
+        try{
+          const r = await fetch("./manifest.webmanifest", { cache: "no-store" });
+          return r.ok;
+        }catch{ return false; }
+      })();
+
+      const swSupported = ("serviceWorker" in navigator);
+
+      if(!manifestOk){
+        $pwaPill.textContent = "PWA: 未設定";
         return;
       }
+
+      if(!swSupported){
+        $pwaPill.textContent = "PWA: 非対応";
+        return;
+      }
+
       try{
-        await navigator.serviceWorker.register("./service-worker.js");
-        statusPill.textContent = "PWA: 有効";
-      }catch(e){
-        statusPill.textContent = "PWA: 失敗";
+        // sw.js が存在する時だけ登録
+        const swRes = await fetch("./sw.js", { cache: "no-store" });
+        if(!swRes.ok){
+          $pwaPill.textContent = "PWA: manifestのみ";
+          return;
+        }
+        await navigator.serviceWorker.register("./sw.js");
+        $pwaPill.textContent = "PWA: 有効";
+      }catch{
+        $pwaPill.textContent = "PWA: 失敗";
       }
     }
-    setupSW();
+
+    /*****************************************************************
+     * Boot
+     *****************************************************************/
+    function boot(){
+      renderAll();
+
+      // 初回メッセージ
+      if(history.length === 0){
+        appendMessage({
+          id: uid(),
+          who: "bot",
+          agentId: "gpt",
+          text: "ChatGPT: よう、KaiGI。まずは一言くれ。",
+          ts: nowTs(),
+        });
+      }
+
+      // mode restore UI
+      setMode(settings.mode);
+      btns.rage.classList.toggle("toggleOn", !!settings.rage);
+
+      // events
+      $send.addEventListener("click", send);
+      $input.addEventListener("keydown", (e) => {
+        if(e.key === "Enter") send();
+      });
+
+      btns.gpt.addEventListener("click", () => setMode("gpt"));
+      btns.claude.addEventListener("click", () => setMode("claude"));
+      btns.gemini.addEventListener("click", () => setMode("gemini"));
+      btns.music.addEventListener("click", () => setMode("music"));
+      btns.all.addEventListener("click", () => setMode("all"));
+      btns.rage.addEventListener("click", toggleRage);
+      btns.clear.addEventListener("click", clearAll);
+
+      // iOS: 入力フォーカス時にtimelineだけ追従（ページ全体は動かさない）
+      $input.addEventListener("focus", () => setTimeout(() => scrollToBottom(false), 250));
+      $input.addEventListener("blur", () => setTimeout(() => scrollToBottom(false), 120));
+
+      // pwa
+      setupPWA();
+    }
+
+    boot();
   </script>
 </body>
 </html>
