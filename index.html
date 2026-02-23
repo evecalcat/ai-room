@@ -3,36 +3,29 @@
 <head>
   <meta charset="utf-8" />
 
-  <!-- 端末差の“ズレ”を減らす基本セット -->
+  <!-- iOS / 端末差の“ズレ”を抑える -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0b0c" />
+  <meta name="theme-color" content="#0b0a10" />
   <meta name="color-scheme" content="dark" />
 
-  <title>KaiGI</title>
+  <title>ai-kaigi</title>
 
-  <!-- iOS / PWA -->
+  <!-- PWA -->
   <link rel="manifest" href="./manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="KaiGI" />
+  <meta name="apple-mobile-web-app-title" content="ai-kaigi" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
 
-  <!-- CSSが来る前に “白フラッシュ/白い余白” を絶対出さない -->
+  <!-- 白フラッシュ封殺 -->
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #0b0b0c; /* ここで白を封殺 */
-      color: #fff;
-      height: 100%;
-      overscroll-behavior: none; /* 余計なゴムバンド感を減らす（本丸はstyle.css） */
-    }
+    html, body { margin:0; padding:0; background:#0b0a10; color:#fff; height:100%; }
   </style>
 
   <link rel="stylesheet" href="./style.css" />
   <script defer src="./app.js"></script>
 
-  <!-- iOSのvh問題：機種/アドレスバー/キーボードで崩れない高さ -->
+  <!-- iOSのvhズレ対策 -->
   <script>
     (function () {
       const setH = () => {
@@ -47,32 +40,41 @@
 </head>
 
 <body>
-  <div id="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand__title">KaiGI</div>
-        <div class="brand__pill" id="modePill">Mode: ChatGPT</div>
-      </div>
-      <div class="brand__pill" id="pwaPill">PWA: -</div>
+  <div class="app" id="app">
+    <!-- Top -->
+    <header class="top safe-top">
+      <button class="icon-btn" id="closeBtn" aria-label="close">×</button>
 
-      <div class="tabs">
-        <button class="tab is-active" data-mode="gpt">ChatGPT</button>
-        <button class="tab" data-mode="claude">Claude</button>
-        <button class="tab" data-mode="gemini">Gemini</button>
-        <button class="tab" data-mode="music">音楽</button>
+      <div class="title">
+        <div class="title__main">ai-kaigi</div>
+        <div class="title__sub"><span class="brand">AI会議室</span></div>
       </div>
 
-      <div class="actions">
-        <button class="chip" data-mode="all">全員会議</button>
-        <button class="chip" id="rageBtn">暴走（長文）</button>
-        <button class="chip chip--danger" id="clearBtn">履歴クリア</button>
-      </div>
+      <button class="icon-btn" id="menuBtn" aria-label="menu">•••</button>
     </header>
 
-    <main class="stage">
-      <section class="chat" id="chat" aria-live="polite"></section>
+    <!-- Tool row -->
+    <div class="toolbar">
+      <button class="pill" id="apiBtn" type="button">⚙️ APIキー設定</button>
+      <div class="ghost" aria-hidden="true"></div>
+    </div>
 
-      <footer class="composer">
+    <!-- Tabs -->
+    <nav class="tabs" id="tabs" aria-label="rooms">
+      <button class="tab is-active" data-room="all" type="button">All</button>
+      <button class="tab" data-room="love" type="button">愛</button>
+      <button class="tab" data-room="jin" type="button">仁</button>
+      <button class="tab" data-room="sync" type="button">統合</button>
+    </nav>
+
+    <!-- Timeline -->
+    <main class="stage" id="stage">
+      <section class="timeline" id="timeline" aria-live="polite"></section>
+    </main>
+
+    <!-- Composer -->
+    <footer class="composer safe-bottom" id="composer">
+      <label class="composer__box">
         <input
           id="input"
           class="composer__input"
@@ -82,16 +84,47 @@
           autocapitalize="none"
           autocorrect="off"
           spellcheck="false"
-          placeholder="中原、何を話す？"
+          placeholder="メッセージを入力..."
         />
-        <button id="sendBtn" class="composer__send">送信</button>
-      </footer>
+      </label>
+      <button id="sendBtn" class="composer__send" type="button" aria-label="send">
+        <span class="sendIcon">↑</span>
+      </button>
+    </footer>
 
-      <div class="hint">
-        ※いまは“ダミー応答”。後でAPI接続すると本物のAIになる。<br/>
-        iPhoneはSafariで開いて「共有 → ホーム画面に追加」でアプリ化。
+    <!-- Modal -->
+    <div class="modal" id="modal" aria-hidden="true">
+      <div class="modal__backdrop" id="modalBackdrop"></div>
+      <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal__head">
+          <div class="modal__title" id="modalTitle">設定</div>
+          <button class="icon-btn" id="modalClose" aria-label="close modal">×</button>
+        </div>
+
+        <div class="modal__body">
+          <div class="field">
+            <div class="field__label">デモ</div>
+            <div class="field__hint">今は“ダミー応答”。後でAPI接続すると本物のAIになる。</div>
+          </div>
+
+          <div class="field">
+            <div class="field__label">見た目</div>
+            <div class="field__hint">紫がイメージカラー。ボタン・枠線・発光が紫で統一。</div>
+          </div>
+
+          <div class="field">
+            <button class="danger" id="clearBtn" type="button">履歴をクリア</button>
+          </div>
+
+          <div class="field">
+            <div class="field__hint">
+              iPhone: Safariで開く → 共有 → 「ホーム画面に追加」でアプリ化。
+            </div>
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
+
   </div>
 </body>
 </html>
