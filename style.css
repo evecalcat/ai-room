@@ -1,115 +1,163 @@
 /* =========================
-   KaiGI UI 完全版 CSS
-   LINE型固定レイアウト
-========================= */
+   KaiGI Core UI Reset
+   端末差・iOSバグ・ズーム暴れ対策
+   ========================= */
 
-/* ===== リセット ===== */
-* {
+/* --- ベースリセット --- */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html, body {
-  height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* 🔥 画面全体スクロール禁止 */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #0f1115;
+  height: 100%;
+  background: #0b0b0c;
   color: #fff;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
 }
 
-/* ===== アプリ全体 ===== */
-#app {
+/* --- iOSズーム防止（入力時の画面暴れ軽減） --- */
+input, textarea, button {
+  font-size: 16px; /* これ未満だとiOSが勝手にズーム */
+}
+
+/* --- アプリ全体レイアウト --- */
+body {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: var(--app-h, 100vh);
 }
 
-/* ===== ヘッダー ===== */
-.header {
-  flex-shrink: 0;
-  padding: 12px;
-  background: #0f1115;
-  border-bottom: 1px solid #222;
+/* --- ノッチ安全エリア対応 --- */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* ===== モードボタン ===== */
-.mode-buttons {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.mode-btn {
-  background: #1c1f26;
-  border: none;
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-}
-
-.mode-btn.active {
-  background: #2e6df6;
-}
-
-/* ===== チャットエリア ===== */
-.chat-container {
-  flex: 1;
-  overflow-y: auto; /* 🔥 ここだけスクロール */
-  -webkit-overflow-scrolling: touch;
-  padding: 16px;
-}
-
-/* ===== メッセージ ===== */
-.message {
-  background: #1c1f26;
+/* =========================
+   HEADER
+   ========================= */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(10,10,11,.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
   padding: 12px 14px;
-  border-radius: 16px;
-  margin-bottom: 10px;
-  max-width: 80%;
-  line-height: 1.5;
 }
 
-/* ユーザー発言 */
-.message.user {
-  margin-left: auto;
-  background: #2e6df6;
-}
-
-/* ===== 入力エリア ===== */
-.input-area {
-  flex-shrink: 0;
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #222;
-  background: #0f1115;
-}
-
-/* 入力ボックス */
-.input-area input {
+/* =========================
+   メインチャット領域
+   ========================= */
+.wrap {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 900px;   /* PCでも広く */
+  margin: 0 auto;
+  padding: 12px;
+  gap: 10px;
+}
+
+/* --- チャット表示領域（最大化） --- */
+.timeline {
+  flex: 1;
+  overflow-y: auto;
+  background: rgba(20,20,22,.55);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 12px;
+}
+
+/* --- メッセージ行 --- */
+.row {
+  display: flex;
+  margin: 8px 0;
+}
+
+.row.user {
+  justify-content: flex-end;
+}
+
+.row.bot {
+  justify-content: flex-start;
+}
+
+/* --- 吹き出し --- */
+.bubble {
+  max-width: 88%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bubble.user {
+  background: linear-gradient(180deg,#1f5eff,#1748d2);
+}
+
+.bubble.bot {
+  background: #2a2a2f;
+}
+
+/* =========================
+   入力エリア
+   ========================= */
+.composer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(10,10,11,.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+input {
+  flex: 1;
+  border: none;
+  outline: none;
   padding: 12px;
   border-radius: 12px;
-  border: none;
-  background: #1c1f26;
+  background: rgba(255,255,255,.08);
   color: #fff;
-  font-size: 16px;
 }
 
-/* 送信ボタン */
-.input-area button {
-  background: #22c55e;
+button {
   border: none;
-  color: white;
   padding: 12px 16px;
   border-radius: 12px;
+  background: #2ea043;
+  color: #0b0b0c;
   font-weight: bold;
-  font-size: 16px;
+  cursor: pointer;
 }
 
-/* ===== スクロールバー非表示（iPhone感） ===== */
-.chat-container::-webkit-scrollbar {
-  display: none;
+button:active {
+  transform: translateY(1px);
+}
+
+/* =========================
+   スクロールバー最小化
+   ========================= */
+.timeline::-webkit-scrollbar {
+  width: 6px;
+}
+.timeline::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.15);
+  border-radius: 4px;
 }
